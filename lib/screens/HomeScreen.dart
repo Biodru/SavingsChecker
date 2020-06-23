@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:finance_manager/widgets/SavingsGoalWidget.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -11,6 +12,72 @@ class _HomeScreenState extends State<HomeScreen> {
   Color textColor = Color(0xFF01A9B4);
   Color accent = Color(0xFF87DFD6);
   Color addOns = Color(0xFFFBFD8A);
+
+  double amount;
+
+  _displayAddSavingsDialog(BuildContext context) async {
+    return showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: Text('Dodaj kwotę wolnych środków'),
+            content: TextField(
+              keyboardType: TextInputType.numberWithOptions(),
+              onChanged: (input) {
+                setState(() {
+                  amount = double.parse(input);
+                });
+              },
+              decoration: InputDecoration(hintText: "Podaj kwotę"),
+            ),
+            actions: <Widget>[
+              new FlatButton(
+                child: new Text('Zatwierdź'),
+                onPressed: () {
+                  freeMoney = freeMoney + amount;
+                  loadData();
+                  Navigator.of(context).pop();
+                },
+              )
+            ],
+          );
+        });
+  }
+
+  _displayRemoveSavingsDialog(BuildContext context) async {
+    return showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: Text('Usuń kwotę z wolnych środków'),
+            content: TextField(
+              keyboardType: TextInputType.numberWithOptions(),
+              onChanged: (input) {
+                setState(() {
+                  amount = double.parse(input);
+                });
+              },
+              decoration: InputDecoration(hintText: "Podaj kwotę"),
+            ),
+            actions: <Widget>[
+              new FlatButton(
+                child: new Text('Zatwierdź'),
+                onPressed: () {
+                  setState(() {
+                    if (amount > freeMoney) {
+                      freeMoney = 0;
+                    } else {
+                      freeMoney = freeMoney - amount;
+                    }
+                  });
+                  loadData();
+                  Navigator.of(context).pop();
+                },
+              )
+            ],
+          );
+        });
+  }
 
   List<SavingsGoalWidget> goals = [
     SavingsGoalWidget(
@@ -45,6 +112,50 @@ class _HomeScreenState extends State<HomeScreen> {
     ),
   ];
 
+  List<PieChartSectionData> _sections = List<PieChartSectionData>();
+  double allSavings;
+  double freeMoney = 100.00;
+
+  void loadData() {
+    setState(() {
+      _sections = [];
+      allSavings = 0;
+      allSavings = allSavings + freeMoney;
+      for (SavingsGoalWidget goal in goals) {
+        allSavings = allSavings + goal.saved;
+      }
+
+      _sections.add(new PieChartSectionData(
+          color: textColor,
+          value: (freeMoney / allSavings) * 100,
+          title: "Wolne",
+          titleStyle: TextStyle(
+              color: textColor.computeLuminance() > 0.5
+                  ? Colors.black
+                  : Colors.white),
+          radius: 50));
+      for (SavingsGoalWidget goal in goals) {
+        _sections.add(
+          new PieChartSectionData(
+              color: goal.tileColor,
+              value: (goal.saved / allSavings) * 100,
+              title: goal.title,
+              titleStyle: TextStyle(
+                  color: goal.tileColor.computeLuminance() > 0.5
+                      ? Colors.black
+                      : Colors.white),
+              radius: 50),
+        );
+      }
+    });
+  }
+
+  @override
+  void initState() {
+    loadData();
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -61,32 +172,28 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Container(
                       height: MediaQuery.of(context).size.width - 80,
                       width: MediaQuery.of(context).size.width - 80,
-                      decoration: BoxDecoration(
-                          border: Border.all(color: textColor),
-                          shape: BoxShape.circle),
-                      child: Center(
-                          child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: <Widget>[
-                          Text(
-                            "Wszystkie środki",
-                            style: TextStyle(fontSize: 30, color: textColor),
-                          ),
-                          Text(
-                            "1000,00 pln",
-                            style: TextStyle(fontSize: 30, color: textColor),
-                          )
-                        ],
-                      )),
+                      child: AspectRatio(
+                        aspectRatio: 1,
+                        child: PieChart(
+                          PieChartData(
+                              sections: _sections,
+                              borderData: FlBorderData(show: false),
+                              sectionsSpace: 0),
+                        ),
+                      ),
                     ),
                   ),
                 ],
+              ),
+              Text(
+                "${allSavings.toStringAsFixed(2)} zł",
+                style: TextStyle(color: textColor, fontSize: 35),
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
                   FlatButton(
-                    onPressed: () {},
+                    onPressed: () => _displayRemoveSavingsDialog(context),
                     child: Icon(
                       Icons.remove,
                       color: addOns,
@@ -95,7 +202,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: accent,
                   ),
                   FlatButton(
-                    onPressed: () {},
+                    onPressed: () => _displayAddSavingsDialog(context),
                     child: Icon(
                       Icons.add,
                       color: addOns,

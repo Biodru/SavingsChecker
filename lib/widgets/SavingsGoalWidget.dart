@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 class SavingsGoalWidget extends StatefulWidget {
   SavingsGoalWidget({
@@ -10,9 +11,9 @@ class SavingsGoalWidget extends StatefulWidget {
   }) : super(key: key);
 
   Color tileColor;
-  final String title;
+  String title;
   double saved;
-  final double goal;
+  double goal;
 
   @override
   _SavingsGoalWidgetState createState() => _SavingsGoalWidgetState();
@@ -20,6 +21,11 @@ class SavingsGoalWidget extends StatefulWidget {
 
 class _SavingsGoalWidgetState extends State<SavingsGoalWidget> {
   bool clicked = false;
+  double amount;
+  String title;
+  double goal;
+  void changeColor(Color color) =>
+      setState(() => this.widget.tileColor = color);
 
   _displayAddSavingsDialog(BuildContext context) async {
     return showDialog(
@@ -31,7 +37,7 @@ class _SavingsGoalWidgetState extends State<SavingsGoalWidget> {
               keyboardType: TextInputType.numberWithOptions(),
               onChanged: (input) {
                 setState(() {
-                  addSavings(double.parse(input));
+                  amount = double.parse(input);
                 });
               },
               decoration: InputDecoration(hintText: "Podaj kwotę"),
@@ -40,9 +46,88 @@ class _SavingsGoalWidgetState extends State<SavingsGoalWidget> {
               new FlatButton(
                 child: new Text('Zatwierdź'),
                 onPressed: () {
+                  addSavings(amount);
                   Navigator.of(context).pop();
                 },
               )
+            ],
+          );
+        });
+  }
+
+  _displayChangessDialog(BuildContext context) async {
+    return showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: Text('Zmień co chcesz'),
+            content: Column(
+              children: <Widget>[
+                Text("Tytuł"),
+                TextField(
+                  keyboardType: TextInputType.numberWithOptions(),
+                  onChanged: (input) {
+                    setState(() {
+                      title = input;
+                    });
+                  },
+                  decoration: InputDecoration(hintText: "Podaj nowy tytuł"),
+                ),
+                Text("Oszczędności"),
+                TextField(
+                  keyboardType: TextInputType.numberWithOptions(),
+                  onChanged: (input) {
+                    setState(() {
+                      amount = double.parse(input);
+                    });
+                  },
+                  decoration:
+                      InputDecoration(hintText: "Podaj nowe oszczędności"),
+                ),
+                Text("Cel"),
+                TextField(
+                  keyboardType: TextInputType.numberWithOptions(),
+                  onChanged: (input) {
+                    setState(() {
+                      goal = double.parse(input);
+                    });
+                  },
+                  decoration: InputDecoration(hintText: "Podaj nowy tytuł"),
+                ),
+                FlatButton(
+                    child: Text('Kolor'),
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: Text('Wybierz kolor'),
+                            content: SingleChildScrollView(
+                              child: BlockPicker(
+                                pickerColor: this.widget.tileColor,
+                                onColorChanged: changeColor,
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    })
+              ],
+            ),
+            actions: <Widget>[
+              new FlatButton(
+                  child: new Text('Zatwierdź'),
+                  onPressed: () {
+                    if (title != null && title != "") {
+                      this.widget.title = title;
+                    }
+                    if (amount != null && amount != 0) {
+                      this.widget.saved = amount;
+                    }
+                    if (goal != null && goal != 0) {
+                      this.widget.goal = goal;
+                    }
+                  })
             ],
           );
         });
@@ -122,7 +207,7 @@ class _SavingsGoalWidgetState extends State<SavingsGoalWidget> {
                       style: TextStyle(color: this.widget.tileColor),
                     ),
                     Text(
-                      "${widget.saved} / ${widget.goal}",
+                      "${widget.saved.toStringAsFixed(2)} / ${widget.goal.toStringAsFixed(2)}",
                       style: TextStyle(color: this.widget.tileColor),
                     ),
                   ],
@@ -148,6 +233,15 @@ class _SavingsGoalWidgetState extends State<SavingsGoalWidget> {
                           },
                           child: Icon(
                             Icons.remove,
+                            color: this.widget.tileColor,
+                          ),
+                          shape: CircleBorder(),
+                          color: Color(0xFF01A9B4),
+                        ),
+                        FlatButton(
+                          onPressed: () => _displayChangessDialog(context),
+                          child: Icon(
+                            Icons.menu,
                             color: this.widget.tileColor,
                           ),
                           shape: CircleBorder(),
