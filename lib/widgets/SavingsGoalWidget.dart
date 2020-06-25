@@ -2,16 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 class SavingsGoalWidget extends StatefulWidget {
-  SavingsGoalWidget({
-    Key key,
-    this.tileColor,
-    this.title,
-    this.saved,
-    this.goal,
-  }) : super(key: key);
+  SavingsGoalWidget(
+      {Key key,
+      this.tileColor,
+      this.title,
+      this.saved,
+      this.goal,
+      this.history,
+      this.info})
+      : super(key: key);
 
   Color tileColor;
   String title;
+  String info;
+  String history;
   double saved;
   double goal;
 

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:finance_manager/widgets/SavingsGoalWidget.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:finance_manager/supporting/DataBaseHandler.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -14,6 +16,103 @@ class _HomeScreenState extends State<HomeScreen> {
   Color addOns = Color(0xFFFBFD8A);
 
   double amount;
+
+  bool _loading = true;
+
+  //Nowy obiekt
+  Color tileColor = Color(0xFF086972);
+  String title;
+  String info;
+  String history;
+  double saved;
+  double goal;
+  void changeColor(Color color) => setState(() => tileColor = color);
+
+  _displayAddNewDialog(BuildContext context) async {
+    return showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: Text('Zmień co chcesz'),
+            content: Column(
+              children: <Widget>[
+                Text("Tytuł"),
+                TextField(
+                  keyboardType: TextInputType.numberWithOptions(),
+                  onChanged: (input) {
+                    setState(() {
+                      title = input;
+                    });
+                  },
+                  decoration: InputDecoration(hintText: "Podaj nowy tytuł"),
+                ),
+                Text("Oszczędności"),
+                TextField(
+                  keyboardType: TextInputType.numberWithOptions(),
+                  onChanged: (input) {
+                    setState(() {
+                      amount = double.parse(input);
+                    });
+                  },
+                  decoration:
+                      InputDecoration(hintText: "Podaj nowe oszczędności"),
+                ),
+                Text("Cel"),
+                TextField(
+                  keyboardType: TextInputType.numberWithOptions(),
+                  onChanged: (input) {
+                    setState(() {
+                      goal = double.parse(input);
+                    });
+                  },
+                  decoration: InputDecoration(hintText: "Podaj nowy tytuł"),
+                ),
+                FlatButton(
+                    child: Text('Kolor'),
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: Text('Wybierz kolor'),
+                            content: SingleChildScrollView(
+                              child: BlockPicker(
+                                pickerColor: tileColor,
+                                onColorChanged: changeColor,
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    })
+              ],
+            ),
+            actions: <Widget>[
+              new FlatButton(
+                  child: new Text('Zatwierdź'),
+                  onPressed: () {
+                    if (title != null && title != "") {
+                      title = title;
+                    }
+                    if (amount != null && amount != 0) {
+                      saved = amount;
+                    }
+                    if (goal != null && goal != 0) {
+                      goal = goal;
+                    }
+                    DataBaseHandler.instance.insert({
+                      DataBaseHandler.title: title,
+                      DataBaseHandler.tileColor: tileColor.value,
+                      DataBaseHandler.saved: saved,
+                      DataBaseHandler.goal: goal
+                    });
+                    loadData();
+                    Navigator.pop(context);
+                  })
+            ],
+          );
+        });
+  }
 
   _displayAddSavingsDialog(BuildContext context) async {
     return showDialog(
@@ -79,61 +178,31 @@ class _HomeScreenState extends State<HomeScreen> {
         });
   }
 
-  List<SavingsGoalWidget> goals = [
-    SavingsGoalWidget(
-      tileColor: Colors.red,
-      title: "Samochód",
-      saved: 57,
-      goal: 20000,
-    ),
-    SavingsGoalWidget(
-      tileColor: Colors.orange,
-      title: "Studia semestr",
-      saved: 475.04,
-      goal: 7000,
-    ),
-    SavingsGoalWidget(
-      tileColor: Colors.green,
-      title: "Hipoteka",
-      saved: 195.93,
-      goal: 500000,
-    ),
-    SavingsGoalWidget(
-      tileColor: Colors.white,
-      title: "iMac",
-      saved: 200,
-      goal: 7000,
-    ),
-    SavingsGoalWidget(
-      tileColor: Colors.brown,
-      title: "Emerytura",
-      saved: 38,
-      goal: 1000000,
-    ),
-  ];
+  List<SavingsGoalWidget> goals = [];
 
   List<PieChartSectionData> _sections = List<PieChartSectionData>();
   double allSavings;
-  double freeMoney = 100.00;
+  double freeMoney;
 
-  void loadData() {
-    setState(() {
+  void loadData() async {
+    setState(() async {
       _sections = [];
       allSavings = 0;
-      allSavings = allSavings + freeMoney;
-      for (SavingsGoalWidget goal in goals) {
-        allSavings = allSavings + goal.saved;
+      List<Map<String, dynamic>> queryRows =
+          await DataBaseHandler.instance.queryAll();
+      for (dynamic query in queryRows) {
+        goals.add(SavingsGoalWidget(
+            title: query[DataBaseHandler.title],
+            tileColor: Color(query[DataBaseHandler.tileColor]),
+            saved: query[DataBaseHandler.saved],
+            goal: query[DataBaseHandler.goal],
+            history: query[DataBaseHandler.history],
+            info: query[DataBaseHandler.info]));
+      }
+      for (SavingsGoalWidget goalie in goals) {
+        allSavings = allSavings + goalie.saved;
       }
 
-      _sections.add(new PieChartSectionData(
-          color: textColor,
-          value: (freeMoney / allSavings) * 100,
-          title: "Wolne",
-          titleStyle: TextStyle(
-              color: textColor.computeLuminance() > 0.5
-                  ? Colors.black
-                  : Colors.white),
-          radius: 50));
       for (SavingsGoalWidget goal in goals) {
         _sections.add(
           new PieChartSectionData(
@@ -147,12 +216,16 @@ class _HomeScreenState extends State<HomeScreen> {
               radius: 50),
         );
       }
+      _loading = false;
     });
   }
 
   @override
   void initState() {
-    loadData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      loadData();
+    });
+
     super.initState();
   }
 
@@ -164,59 +237,67 @@ class _HomeScreenState extends State<HomeScreen> {
         child: SingleChildScrollView(
           child: Column(
             children: <Widget>[
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Padding(
-                    padding: const EdgeInsets.all(10.0),
-                    child: Container(
-                      height: MediaQuery.of(context).size.width - 80,
-                      width: MediaQuery.of(context).size.width - 80,
-                      child: AspectRatio(
-                        aspectRatio: 1,
-                        child: PieChart(
-                          PieChartData(
-                              sections: _sections,
-                              borderData: FlBorderData(show: false),
-                              sectionsSpace: 0),
+              _loading
+                  ? Text("Ładowanie")
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        Padding(
+                          padding: const EdgeInsets.all(10.0),
+                          child: Container(
+                            height: MediaQuery.of(context).size.width - 80,
+                            width: MediaQuery.of(context).size.width - 80,
+                            child: AspectRatio(
+                              aspectRatio: 1,
+                              child: PieChart(
+                                PieChartData(
+                                    sections: _sections,
+                                    borderData: FlBorderData(show: false),
+                                    sectionsSpace: 0),
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-              Text(
-                "${allSavings.toStringAsFixed(2)} zł",
-                style: TextStyle(color: textColor, fontSize: 35),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: <Widget>[
-                  FlatButton(
-                    onPressed: () => _displayRemoveSavingsDialog(context),
-                    child: Icon(
-                      Icons.remove,
-                      color: addOns,
+              _loading
+                  ? Text("Ładowanie")
+                  : Text(
+                      "${allSavings.toStringAsFixed(2)} zł",
+                      style: TextStyle(color: textColor, fontSize: 35),
                     ),
-                    shape: CircleBorder(),
-                    color: accent,
-                  ),
-                  FlatButton(
-                    onPressed: () => _displayAddSavingsDialog(context),
-                    child: Icon(
-                      Icons.add,
-                      color: addOns,
+              _loading
+                  ? Text("Ładowanie")
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: <Widget>[
+                        FlatButton(
+                          onPressed: () => _displayRemoveSavingsDialog(context),
+                          child: Icon(
+                            Icons.remove,
+                            color: addOns,
+                          ),
+                          shape: CircleBorder(),
+                          color: accent,
+                        ),
+                        FlatButton(
+                          onPressed: () => _displayAddSavingsDialog(context),
+                          child: Icon(
+                            Icons.add,
+                            color: addOns,
+                          ),
+                          shape: CircleBorder(),
+                          color: accent,
+                        ),
+                      ],
                     ),
-                    shape: CircleBorder(),
-                    color: accent,
-                  ),
-                ],
-              ),
-              Column(
-                children: goals,
-              ),
+              _loading
+                  ? Text("Ładowanie")
+                  : Column(
+                      children: goals,
+                    ),
               FlatButton(
-                onPressed: () {},
+                onPressed: () => _displayAddNewDialog(context),
                 child: Icon(
                   Icons.add,
                   color: addOns,
