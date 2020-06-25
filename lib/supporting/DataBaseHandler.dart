@@ -52,11 +52,9 @@ class DataBaseHandler {
     return db.query(_tableName);
   }
 
-  Future update(Map<String, dynamic> row) async {
+  Future update(Map<String, dynamic> row, int idPassed) async {
     Database db = await instance.database;
-    int idC = row[id];
-    return db
-        .update(_tableName, row, where: '$id = ? $title = ?', whereArgs: [idC]);
+    return db.update(_tableName, row, where: '$id = ?', whereArgs: [idPassed]);
   }
 
   Future delete(int idPassed) async {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:finance_manager/supporting/DataBaseHandler.dart';
 
 class SavingsGoalWidget extends StatefulWidget {
   SavingsGoalWidget(
@@ -9,7 +10,8 @@ class SavingsGoalWidget extends StatefulWidget {
       this.saved,
       this.goal,
       this.history,
-      this.info})
+      this.info,
+      this.id})
       : super(key: key);
 
   Color tileColor;
@@ -18,6 +20,7 @@ class SavingsGoalWidget extends StatefulWidget {
   String history;
   double saved;
   double goal;
+  int id;
 
   @override
   _SavingsGoalWidgetState createState() => _SavingsGoalWidgetState();
@@ -172,16 +175,24 @@ class _SavingsGoalWidgetState extends State<SavingsGoalWidget> {
     this.widget.saved = newSavings;
   }
 
-  void addSavings(double addedAmount) {
+  void addSavings(double addedAmount) async {
     this.widget.saved = this.widget.saved + addedAmount;
+    await DataBaseHandler.instance.update({
+      DataBaseHandler.saved: this.widget.saved,
+      DataBaseHandler.history: 'Zasilenie: $addedAmount \n'
+    }, this.widget.id);
   }
 
-  void removeSavings(double removedAmount) {
+  void removeSavings(double removedAmount) async {
     if (removedAmount > this.widget.saved) {
       this.widget.saved = 0;
     } else {
       this.widget.saved = this.widget.saved - removedAmount;
     }
+    await DataBaseHandler.instance.update({
+      DataBaseHandler.saved: this.widget.saved,
+      DataBaseHandler.history: 'Zasilenie: $removedAmount \n'
+    }, this.widget.id);
   }
 
   @override
@@ -243,7 +254,9 @@ class _SavingsGoalWidgetState extends State<SavingsGoalWidget> {
                           color: Color(0xFF01A9B4),
                         ),
                         FlatButton(
-                          onPressed: () => _displayChangessDialog(context),
+                          onPressed: () async {
+                            await _displayAddSavingsDialog(context);
+                          },
                           child: Icon(
                             Icons.menu,
                             color: this.widget.tileColor,

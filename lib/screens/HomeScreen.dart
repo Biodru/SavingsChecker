@@ -17,10 +17,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   double amount;
 
-  bool _loading = true;
+  bool _loading = false;
 
   //Nowy obiekt
-  Color tileColor = Color(0xFF086972);
+  Color tileColor = Colors.white;
   String title;
   String info;
   String history;
@@ -108,6 +108,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     });
                     loadData();
                     Navigator.pop(context);
+                    title = null;
+                    tileColor = Colors.white;
+                    saved = null;
+                    goal = null;
                   })
             ],
           );
@@ -187,17 +191,21 @@ class _HomeScreenState extends State<HomeScreen> {
   void loadData() async {
     setState(() async {
       _sections = [];
+      goals = [];
       allSavings = 0;
       List<Map<String, dynamic>> queryRows =
           await DataBaseHandler.instance.queryAll();
       for (dynamic query in queryRows) {
         goals.add(SavingsGoalWidget(
-            title: query[DataBaseHandler.title],
-            tileColor: Color(query[DataBaseHandler.tileColor]),
-            saved: query[DataBaseHandler.saved],
-            goal: query[DataBaseHandler.goal],
-            history: query[DataBaseHandler.history],
-            info: query[DataBaseHandler.info]));
+          title: query[DataBaseHandler.title],
+          tileColor: Color(query[DataBaseHandler.tileColor]),
+          saved: query[DataBaseHandler.saved],
+          goal: query[DataBaseHandler.goal],
+          history: query[DataBaseHandler.history],
+          info: query[DataBaseHandler.info],
+          id: query[DataBaseHandler.id],
+        ));
+        print("*******${query[DataBaseHandler.title]}*******");
       }
       for (SavingsGoalWidget goalie in goals) {
         allSavings = allSavings + goalie.saved;
@@ -265,31 +273,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   : Text(
                       "${allSavings.toStringAsFixed(2)} zł",
                       style: TextStyle(color: textColor, fontSize: 35),
-                    ),
-              _loading
-                  ? Text("Ładowanie")
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: <Widget>[
-                        FlatButton(
-                          onPressed: () => _displayRemoveSavingsDialog(context),
-                          child: Icon(
-                            Icons.remove,
-                            color: addOns,
-                          ),
-                          shape: CircleBorder(),
-                          color: accent,
-                        ),
-                        FlatButton(
-                          onPressed: () => _displayAddSavingsDialog(context),
-                          child: Icon(
-                            Icons.add,
-                            color: addOns,
-                          ),
-                          shape: CircleBorder(),
-                          color: accent,
-                        ),
-                      ],
                     ),
               _loading
                   ? Text("Ładowanie")
