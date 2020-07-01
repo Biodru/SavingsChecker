@@ -3,8 +3,11 @@ import 'package:finance_manager/widgets/SavingsGoalWidget.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:finance_manager/supporting/DataBaseHandler.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:modal_progress_hud/modal_progress_hud.dart';
+import 'package:finance_manager/widgets/MenuDrawer.dart';
 
 class HomeScreen extends StatefulWidget {
+  static final String id = 'HomeScreen';
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
@@ -188,7 +191,7 @@ class _HomeScreenState extends State<HomeScreen> {
   double allSavings;
   double freeMoney;
 
-  void loadData() async {
+  loadData() async {
     setState(() async {
       _sections = [];
       goals = [];
@@ -196,16 +199,17 @@ class _HomeScreenState extends State<HomeScreen> {
       List<Map<String, dynamic>> queryRows =
           await DataBaseHandler.instance.queryAll();
       for (dynamic query in queryRows) {
-        goals.add(SavingsGoalWidget(
-          title: query[DataBaseHandler.title],
-          tileColor: Color(query[DataBaseHandler.tileColor]),
-          saved: query[DataBaseHandler.saved],
-          goal: query[DataBaseHandler.goal],
-          history: query[DataBaseHandler.history],
-          info: query[DataBaseHandler.info],
-          id: query[DataBaseHandler.id],
-        ));
-        print("*******${query[DataBaseHandler.title]}*******");
+        goals.add(
+          SavingsGoalWidget(
+            title: query[DataBaseHandler.title],
+            tileColor: Color(query[DataBaseHandler.tileColor]),
+            saved: query[DataBaseHandler.saved],
+            goal: query[DataBaseHandler.goal],
+            history: query[DataBaseHandler.history],
+            info: query[DataBaseHandler.info],
+            id: query[DataBaseHandler.id],
+          ),
+        );
       }
       for (SavingsGoalWidget goalie in goals) {
         allSavings = allSavings + goalie.saved;
@@ -241,44 +245,50 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: background,
+      endDrawer: MenuDrawer(),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
             children: <Widget>[
-              _loading
-                  ? Text("Ładowanie")
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        Padding(
-                          padding: const EdgeInsets.all(10.0),
-                          child: Container(
-                            height: MediaQuery.of(context).size.width - 80,
-                            width: MediaQuery.of(context).size.width - 80,
-                            child: AspectRatio(
-                              aspectRatio: 1,
-                              child: PieChart(
-                                PieChartData(
-                                    sections: _sections,
-                                    borderData: FlBorderData(show: false),
-                                    sectionsSpace: 0),
-                              ),
-                            ),
+              ModalProgressHUD(
+                inAsyncCall: _loading,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    Padding(
+                      padding: const EdgeInsets.all(10.0),
+                      child: Container(
+                        height: MediaQuery.of(context).size.width - 80,
+                        width: MediaQuery.of(context).size.width - 80,
+                        child: AspectRatio(
+                          aspectRatio: 1,
+                          child: PieChart(
+                            PieChartData(
+                                sections: _sections,
+                                borderData: FlBorderData(show: false),
+                                sectionsSpace: 0),
                           ),
                         ),
-                      ],
+                      ),
                     ),
-              _loading
-                  ? Text("Ładowanie")
-                  : Text(
-                      "${allSavings.toStringAsFixed(2)} zł",
-                      style: TextStyle(color: textColor, fontSize: 35),
-                    ),
-              _loading
-                  ? Text("Ładowanie")
-                  : Column(
-                      children: goals,
-                    ),
+                  ],
+                ),
+              ),
+              ModalProgressHUD(
+                inAsyncCall: _loading,
+                child: Text(
+                  allSavings == null
+                      ? 'Ładowanie'
+                      : "${allSavings.toStringAsFixed(2)} zł",
+                  style: TextStyle(color: textColor, fontSize: 35),
+                ),
+              ),
+              ModalProgressHUD(
+                inAsyncCall: _loading,
+                child: Column(
+                  children: goals,
+                ),
+              ),
               FlatButton(
                 onPressed: () => _displayAddNewDialog(context),
                 child: Icon(

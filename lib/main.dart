@@ -10,6 +10,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Demo',
       home: HomeScreen(),
+      routes: {HomeScreen.id: (context) => HomeScreen()},
     );
   }
 }

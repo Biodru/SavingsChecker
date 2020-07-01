@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:finance_manager/supporting/DataBaseHandler.dart';
+import 'package:finance_manager/screens/HomeScreen.dart';
 
 class SavingsGoalWidget extends StatefulWidget {
   SavingsGoalWidget(
@@ -31,6 +32,8 @@ class _SavingsGoalWidgetState extends State<SavingsGoalWidget> {
   double amount;
   String title;
   double goal;
+  String info;
+  bool updateTitle = false;
   void changeColor(Color color) =>
       setState(() => this.widget.tileColor = color);
 
@@ -54,7 +57,7 @@ class _SavingsGoalWidgetState extends State<SavingsGoalWidget> {
                 child: new Text('Zatwierdź'),
                 onPressed: () {
                   addSavings(amount);
-                  Navigator.of(context).pop();
+                  Navigator.of(context).pushReplacementNamed(HomeScreen.id);
                 },
               )
             ],
@@ -76,6 +79,15 @@ class _SavingsGoalWidgetState extends State<SavingsGoalWidget> {
                   onChanged: (input) {
                     setState(() {
                       title = input;
+                    });
+                  },
+                  decoration: InputDecoration(hintText: "Podaj nowy tytuł"),
+                ),
+                Text("Informacje"),
+                TextField(
+                  onChanged: (input) {
+                    setState(() {
+                      info = input;
                     });
                   },
                   decoration: InputDecoration(hintText: "Podaj nowy tytuł"),
@@ -124,16 +136,36 @@ class _SavingsGoalWidgetState extends State<SavingsGoalWidget> {
             actions: <Widget>[
               new FlatButton(
                   child: new Text('Zatwierdź'),
-                  onPressed: () {
+                  onPressed: () async {
                     if (title != null && title != "") {
                       this.widget.title = title;
+                      await DataBaseHandler.instance.update(
+                          {DataBaseHandler.title: this.widget.title},
+                          this.widget.id);
+                    }
+                    if (info != null && info != "") {
+                      this.widget.info = info;
+                      await DataBaseHandler.instance.update(
+                          {DataBaseHandler.info: this.widget.info},
+                          this.widget.id);
                     }
                     if (amount != null && amount != 0) {
                       this.widget.saved = amount;
+                      await DataBaseHandler.instance.update(
+                          {DataBaseHandler.saved: this.widget.saved},
+                          this.widget.id);
                     }
                     if (goal != null && goal != 0) {
+                      await DataBaseHandler.instance.update(
+                          {DataBaseHandler.goal: this.widget.goal},
+                          this.widget.id);
                       this.widget.goal = goal;
                     }
+                    await DataBaseHandler.instance.update({
+                      DataBaseHandler.tileColor: this.widget.tileColor.value
+                    }, this.widget.id);
+                    this.widget.goal = goal;
+                    Navigator.pop(context);
                   })
             ],
           );
@@ -150,7 +182,7 @@ class _SavingsGoalWidgetState extends State<SavingsGoalWidget> {
               keyboardType: TextInputType.numberWithOptions(),
               onChanged: (input) {
                 setState(() {
-                  removeSavings(double.parse(input));
+                  amount = double.parse(input);
                 });
               },
               decoration: InputDecoration(hintText: "Podaj kwotę"),
@@ -159,7 +191,7 @@ class _SavingsGoalWidgetState extends State<SavingsGoalWidget> {
               new FlatButton(
                 child: new Text('Zatwierdź'),
                 onPressed: () {
-                  Navigator.of(context).pop();
+                  Navigator.of(context).pushReplacementNamed(HomeScreen.id);
                 },
               )
             ],
@@ -177,9 +209,10 @@ class _SavingsGoalWidgetState extends State<SavingsGoalWidget> {
 
   void addSavings(double addedAmount) async {
     this.widget.saved = this.widget.saved + addedAmount;
+    this.widget.history = this.widget.history + 'Zasilenie: $addedAmount \n';
     await DataBaseHandler.instance.update({
       DataBaseHandler.saved: this.widget.saved,
-      DataBaseHandler.history: 'Zasilenie: $addedAmount \n'
+      DataBaseHandler.history: this.widget.history,
     }, this.widget.id);
   }
 
@@ -189,9 +222,11 @@ class _SavingsGoalWidgetState extends State<SavingsGoalWidget> {
     } else {
       this.widget.saved = this.widget.saved - removedAmount;
     }
+    this.widget.history =
+        this.widget.history + 'Obciążenie: -$removedAmount \n';
     await DataBaseHandler.instance.update({
       DataBaseHandler.saved: this.widget.saved,
-      DataBaseHandler.history: 'Zasilenie: $removedAmount \n'
+      DataBaseHandler.history: this.widget.history
     }, this.widget.id);
   }
 
@@ -222,7 +257,9 @@ class _SavingsGoalWidgetState extends State<SavingsGoalWidget> {
                       style: TextStyle(color: this.widget.tileColor),
                     ),
                     Text(
-                      "${widget.saved.toStringAsFixed(2)} / ${widget.goal.toStringAsFixed(2)}",
+                      widget.saved == null || widget.goal == null
+                          ? 'Ładowanie'
+                          : "${widget.saved.toStringAsFixed(2)} / ${widget.goal.toStringAsFixed(2)}",
                       style: TextStyle(color: this.widget.tileColor),
                     ),
                   ],
@@ -239,39 +276,56 @@ class _SavingsGoalWidgetState extends State<SavingsGoalWidget> {
                 ),
               ),
               clicked
-                  ? Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  ? Column(
                       children: <Widget>[
-                        FlatButton(
-                          onPressed: () {
-                            _displayRemoveSavingsDialog(context);
-                          },
-                          child: Icon(
-                            Icons.remove,
-                            color: this.widget.tileColor,
-                          ),
-                          shape: CircleBorder(),
-                          color: Color(0xFF01A9B4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: <Widget>[
+                            FlatButton(
+                              onPressed: () {
+                                _displayRemoveSavingsDialog(context);
+                              },
+                              child: Icon(
+                                Icons.remove,
+                                color: this.widget.tileColor,
+                              ),
+                              shape: CircleBorder(),
+                              color: Color(0xFF01A9B4),
+                            ),
+                            FlatButton(
+                              onPressed: () async {
+                                await _displayChangessDialog(context);
+                              },
+                              child: Icon(
+                                Icons.menu,
+                                color: this.widget.tileColor,
+                              ),
+                              shape: CircleBorder(),
+                              color: Color(0xFF01A9B4),
+                            ),
+                            FlatButton(
+                              onPressed: () =>
+                                  _displayAddSavingsDialog(context),
+                              child: Icon(
+                                Icons.add,
+                                color: this.widget.tileColor,
+                              ),
+                              shape: CircleBorder(),
+                              color: Color(0xFF01A9B4),
+                            ),
+                          ],
                         ),
-                        FlatButton(
-                          onPressed: () async {
-                            await _displayAddSavingsDialog(context);
-                          },
-                          child: Icon(
-                            Icons.menu,
-                            color: this.widget.tileColor,
-                          ),
-                          shape: CircleBorder(),
-                          color: Color(0xFF01A9B4),
+                        Text(
+                          this.widget.info == null
+                              ? 'Brak informacji'
+                              : this.widget.info,
+                          style: TextStyle(color: this.widget.tileColor),
                         ),
-                        FlatButton(
-                          onPressed: () => _displayAddSavingsDialog(context),
-                          child: Icon(
-                            Icons.add,
-                            color: this.widget.tileColor,
-                          ),
-                          shape: CircleBorder(),
-                          color: Color(0xFF01A9B4),
+                        Text(
+                          this.widget.history == null
+                              ? 'Brak historii'
+                              : this.widget.history,
+                          style: TextStyle(color: this.widget.tileColor),
                         ),
                       ],
                     )
